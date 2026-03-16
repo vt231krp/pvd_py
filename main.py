@@ -16,30 +16,22 @@ def get_interval(d):
     return None
 
 
-# Algorithm for Embedding Data
 def embed_pvd(p1, p2, secret_char):
-    # Calculate initial difference
     d = abs(p2 - p1)
 
-    # Determine interval and bits capacity
     l_k, _, n = get_interval(d)
 
-    # Convert secret character to binary (8 bits) and take the first 'n' bits
     bin_char = format(ord(secret_char), "08b")
     secret_bits = bin_char[:n]
 
-    # Convert those n bits to decimal
     b = int(secret_bits, 2)
 
-    # Calculate new difference
     d_prime = l_k + b
 
-    # Pixel Correction
     m = d_prime - d
     delta_p1 = math.floor(abs(m) / 2)
     delta_p2 = math.ceil(abs(m) / 2)
 
-    # Apply conditions to distribute the changes safely
     if m == 0:
         p1_new, p2_new = p1, p2
     elif m > 0:
@@ -49,7 +41,7 @@ def embed_pvd(p1, p2, secret_char):
         else:
             p1_new = p1 + delta_p1
             p2_new = p2 - delta_p2
-    else:  # m < 0
+    else:
         if p2 >= p1:
             p1_new = p1 + delta_p1
             p2_new = p2 - delta_p2
@@ -57,31 +49,24 @@ def embed_pvd(p1, p2, secret_char):
             p1_new = p1 - delta_p1
             p2_new = p2 + delta_p2
 
-    # Ensure pixels stay within [0, 255] boundary
     p1_new = max(0, min(255, p1_new))
     p2_new = max(0, min(255, p2_new))
 
     return bin_char, secret_bits, p1_new, p2_new
 
 
-# Algorithm for Extracting Data
 def extract_pvd(p1_new, p2_new):
-    # Calculate difference of the new pixels
     d_prime = abs(p2_new - p1_new)
 
-    # Find which interval it belongs to
     l_k, _, n = get_interval(d_prime)
 
-    # Extract the decimal value of the hidden bits
     b = d_prime - l_k
 
-    # Convert back to binary (padded to n bits)
     extracted_bits = format(b, f"0{n}b")
 
     return extracted_bits
 
 
-# Testing the Implementation
 def run_tests():
     print(
         f"{'Test':<5} | {'P1':<4} {'P2':<4} | {'Char':<4} | {'Bin (8-bit)':<10} | {'n bits':<8} | {'New P1':<6} {'New P2':<6} | {'Extracted'}"
@@ -94,20 +79,100 @@ def run_tests():
         (200, 254, "r"),
         (147, 235, "S"),
         (0, 200, "!"),
+        (50, 50, "Z"),
+        (10, 2, "b"),
+        (31, 0, "C"),
+        (95, 63, "~"),
+        (255, 128, "k"),
+        (255, 0, "?"),
+        (1, 254, "9"),
+        (240, 245, " "),
     ]
 
     for i, (p1, p2, char) in enumerate(test_cases, 1):
-        # Embed
         full_bin, secret_bits, p1_new, p2_new = embed_pvd(p1, p2, char)
 
-        # Extract to verify it works
         extracted = extract_pvd(p1_new, p2_new)
 
-        # Print results matching the table in the manual
         print(
             f"{i:<5} | {p1:<4} {p2:<4} | {char:<4} | {full_bin:<10} | {secret_bits:<8} | {p1_new:<6} {p2_new:<6} | {extracted}"
         )
 
 
+def read_pixel(prompt):
+    while True:
+        raw = input(prompt).strip()
+        try:
+            value = int(raw)
+        except ValueError:
+            print("Please enter a valid integer.")
+            continue
+
+        if 0 <= value <= 255:
+            return value
+
+        print("Pixel value must be between 0 and 255.")
+
+
+def read_single_char(prompt):
+    while True:
+        value = input(prompt)
+        if len(value) == 1:
+            return value
+        print("Please enter exactly one character.")
+
+
+def run_embed_interactive():
+    print("\nEmbed using PVD")
+    p1 = read_pixel("Enter P1 (0-255): ")
+    p2 = read_pixel("Enter P2 (0-255): ")
+    char = read_single_char("Enter one character to embed: ")
+
+    full_bin, secret_bits, p1_new, p2_new = embed_pvd(p1, p2, char)
+
+    print("\nResult")
+    print(f"Character (8-bit): {full_bin}")
+    print(f"Embedded bits:      {secret_bits}")
+    print(f"New P1, P2:         {p1_new}, {p2_new}")
+
+
+def run_extract_interactive():
+    print("\nExtract using PVD")
+    p1_new = read_pixel("Enter modified P1 (0-255): ")
+    p2_new = read_pixel("Enter modified P2 (0-255): ")
+
+    extracted_bits = extract_pvd(p1_new, p2_new)
+
+    print("\nResult")
+    print(f"Extracted bits: {extracted_bits}")
+
+
+def show_menu():
+    print("\nPVD Operations Menu")
+    print("1. Run test cases")
+    print("2. Embed one character")
+    print("3. Extract bits")
+    print("4. Exit")
+
+
+def main():
+    while True:
+        show_menu()
+        choice = input("Choose an operation (1-4): ").strip()
+
+        if choice == "1":
+            print()
+            run_tests()
+        elif choice == "2":
+            run_embed_interactive()
+        elif choice == "3":
+            run_extract_interactive()
+        elif choice == "4":
+            print("Exiting.")
+            break
+        else:
+            print("Invalid choice. Please select 1, 2, 3, or 4.")
+
+
 if __name__ == "__main__":
-    run_tests()
+    main()
