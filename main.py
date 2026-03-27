@@ -16,21 +16,36 @@ def get_interval(d):
     return None
 
 
-def embed_pvd(p1, p2, secret_char):
-    d = abs(p2 - p1)
+def embed_pvd(p1, p2, secret_char, verbose=False):
+    if verbose:
+        print("\n--- CALCULATION STEPS (EMBEDDING) ---")
 
-    l_k, _, n = get_interval(d)
+    d = abs(p2 - p1)
+    if verbose:
+        print(f"[Step 1] Initial difference: d = |{p2} - {p1}| = {d}")
+
+    l_k, u_k, n = get_interval(d)
+    if verbose:
+        print(f"[Step 2] Interval for {d} is [{l_k}, {u_k}]. Can embed n = {n} bits.")
 
     bin_char = format(ord(secret_char), "08b")
     secret_bits = bin_char[:n]
-
     b = int(secret_bits, 2)
+    if verbose:
+        print(f"[Step 3] Character '{secret_char}' in binary = {bin_char}")
+        print(f"         Take first {n} bits: '{secret_bits}'. Decimal value b = {b}")
 
     d_prime = l_k + b
+    if verbose:
+        print(f"[Step 4] New difference: d' = l_k + b = {l_k} + {b} = {d_prime}")
 
     m = d_prime - d
     delta_p1 = math.floor(abs(m) / 2)
     delta_p2 = math.ceil(abs(m) / 2)
+    if verbose:
+        print(f"[Step 5] Adjustment m = d' - d = {d_prime} - {d} = {m}")
+        print(f"         delta_P1 = floor(|{m}| / 2) = {delta_p1}")
+        print(f"         delta_P2 = ceil(|{m}| / 2) = {delta_p2}")
 
     if m == 0:
         p1_new, p2_new = p1, p2
@@ -49,20 +64,47 @@ def embed_pvd(p1, p2, secret_char):
             p1_new = p1 - delta_p1
             p2_new = p2 + delta_p2
 
+    if verbose:
+        print(f"[Step 6] New pixels before clamping: P1'={p1_new}, P2'={p2_new}")
+
     p1_new = max(0, min(255, p1_new))
     p2_new = max(0, min(255, p2_new))
+
+    if verbose:
+        print(f"[Step 7] Final pixels (within 0-255): P1'={p1_new}, P2'={p2_new}")
+    if verbose:
+        print("--------------------------------------")
 
     return bin_char, secret_bits, p1_new, p2_new
 
 
-def extract_pvd(p1_new, p2_new):
-    d_prime = abs(p2_new - p1_new)
+def extract_pvd(p1_new, p2_new, verbose=False):
+    if verbose:
+        print("\n--- CALCULATION STEPS (EXTRACTION) ---")
 
-    l_k, _, n = get_interval(d_prime)
+    d_prime = abs(p2_new - p1_new)
+    if verbose:
+        print(
+            f"[Step 1] Difference of modified pixels: d' = |{p2_new} - {p1_new}| = {d_prime}"
+        )
+
+    l_k, u_k, n = get_interval(d_prime)
+    if verbose:
+        print(
+            f"[Step 2] Interval for {d_prime} is [{l_k}, {u_k}]. Embedded n = {n} bits."
+        )
 
     b = d_prime - l_k
+    if verbose:
+        print(
+            f"[Step 3] Decimal value of hidden bits: b = d' - l_k = {d_prime} - {l_k} = {b}"
+        )
 
     extracted_bits = format(b, f"0{n}b")
+    if verbose:
+        print(f"[Step 4] Convert number {b} to {n}-bit format: '{extracted_bits}'")
+    if verbose:
+        print("-----------------------------------")
 
     return extracted_bits
 
@@ -91,7 +133,6 @@ def run_tests():
 
     for i, (p1, p2, char) in enumerate(test_cases, 1):
         full_bin, secret_bits, p1_new, p2_new = embed_pvd(p1, p2, char)
-
         extracted = extract_pvd(p1_new, p2_new)
 
         print(
@@ -107,10 +148,8 @@ def read_pixel(prompt):
         except ValueError:
             print("Please enter a valid integer.")
             continue
-
         if 0 <= value <= 255:
             return value
-
         print("Pixel value must be between 0 and 255.")
 
 
@@ -123,12 +162,12 @@ def read_single_char(prompt):
 
 
 def run_embed_interactive():
-    print("\nEmbed using PVD")
+    print("\nEmbed with PVD")
     p1 = read_pixel("Enter P1 (0-255): ")
     p2 = read_pixel("Enter P2 (0-255): ")
     char = read_single_char("Enter one character to embed: ")
 
-    full_bin, secret_bits, p1_new, p2_new = embed_pvd(p1, p2, char)
+    full_bin, secret_bits, p1_new, p2_new = embed_pvd(p1, p2, char, verbose=True)
 
     print("\nResult")
     print(f"Character (8-bit): {full_bin}")
@@ -137,11 +176,11 @@ def run_embed_interactive():
 
 
 def run_extract_interactive():
-    print("\nExtract using PVD")
+    print("\nExtract with PVD")
     p1_new = read_pixel("Enter modified P1 (0-255): ")
     p2_new = read_pixel("Enter modified P2 (0-255): ")
 
-    extracted_bits = extract_pvd(p1_new, p2_new)
+    extracted_bits = extract_pvd(p1_new, p2_new, verbose=True)
 
     print("\nResult")
     print(f"Extracted bits: {extracted_bits}")
@@ -150,8 +189,8 @@ def run_extract_interactive():
 def show_menu():
     print("\nPVD Operations Menu")
     print("1. Run test cases")
-    print("2. Embed one character")
-    print("3. Extract bits")
+    print("2. Embed one character (with math steps)")
+    print("3. Extract bits (with math steps)")
     print("4. Exit")
 
 
