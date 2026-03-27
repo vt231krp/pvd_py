@@ -65,14 +65,47 @@ def embed_pvd(p1, p2, secret_char, verbose=False):
             p2_new = p2 + delta_p2
 
     if verbose:
-        print(f"[Step 6] New pixels before clamping: P1'={p1_new}, P2'={p2_new}")
+        print(f"[Step 6] New pixels before boundary check: P1'={p1_new}, P2'={p2_new}")
 
-    p1_new = max(0, min(255, p1_new))
-    p2_new = max(0, min(255, p2_new))
+    shifted = False
+
+    if p1_new < 0:
+        shift = 0 - p1_new
+        p1_new = 0
+        p2_new += shift
+        shifted = True
+        if verbose:
+            print(f"[Step 7] P1' < 0. Applied Variant 2 shift by +{shift}")
+
+    elif p2_new < 0:
+        shift = 0 - p2_new
+        p2_new = 0
+        p1_new += shift
+        shifted = True
+        if verbose:
+            print(f"[Step 7] P2' < 0. Applied Variant 2 shift by +{shift}")
+
+    if p1_new > 255:
+        shift = p1_new - 255
+        p1_new = 255
+        p2_new -= shift
+        shifted = True
+        if verbose:
+            print(f"[Step 7] P1' > 255. Applied Variant 2 shift by -{shift}")
+
+    elif p2_new > 255:
+        shift = p2_new - 255
+        p2_new = 255
+        p1_new -= shift
+        shifted = True
+        if verbose:
+            print(f"[Step 7] P2' > 255. Applied Variant 2 shift by -{shift}")
+
+    if verbose and not shifted:
+        print(f"[Step 7] Pixels are within boundaries [0, 255]. No shift needed.")
 
     if verbose:
-        print(f"[Step 7] Final pixels (within 0-255): P1'={p1_new}, P2'={p2_new}")
-    if verbose:
+        print(f"[Final ] Resulting pixels: P1'={p1_new}, P2'={p2_new}")
         print("--------------------------------------")
 
     return bin_char, secret_bits, p1_new, p2_new
@@ -122,6 +155,7 @@ def run_tests():
         (147, 235, "S"),
         (0, 200, "!"),
         (50, 50, "Z"),
+        (80, 5, "f"),
         (10, 2, "b"),
         (31, 0, "C"),
         (95, 63, "~"),
@@ -134,7 +168,6 @@ def run_tests():
     for i, (p1, p2, char) in enumerate(test_cases, 1):
         full_bin, secret_bits, p1_new, p2_new = embed_pvd(p1, p2, char)
         extracted = extract_pvd(p1_new, p2_new)
-
         print(
             f"{i:<5} | {p1:<4} {p2:<4} | {char:<4} | {full_bin:<10} | {secret_bits:<8} | {p1_new:<6} {p2_new:<6} | {extracted}"
         )
